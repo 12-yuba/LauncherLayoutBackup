@@ -47,7 +47,7 @@ if ! "$AAPT2" link \
       "$OUT/res.zip" \
       --java "$OUT/gen" \
       --min-sdk-version 26 --target-sdk-version 29 \
-      --version-code 17 --version-name 2.8 \
+      --version-code 18 --version-name 2.9 \
       > "$OUT/aapt2l.log" 2>&1; then
   echo "!! aapt2 link 失败"; head -40 "$OUT/aapt2l.log"; exit 1
 fi
@@ -108,20 +108,20 @@ if [ ! -f "$KS" ]; then
 fi
 "$JDK/bin/jarsigner" -keystore "$KS" -storepass llb123456 -keypass llb123456 \
   -sigalg SHA256withRSA -digestalg SHA-256 \
-  -signedjar "$OUT/LauncherLayoutBackup-2.8.apk" "$OUT/apk/unsigned.apk" llb > "$OUT/sign.log" 2>&1 \
+  -signedjar "$OUT/LauncherLayoutBackup-2.9.apk" "$OUT/apk/unsigned.apk" llb > "$OUT/sign.log" 2>&1 \
   || { echo "!! jarsigner 失败"; head -20 "$OUT/sign.log"; exit 1; }
 
 echo
 echo "=== 7) 产物 ==="
-ls -la "$OUT/LauncherLayoutBackup-2.8.apk"
+ls -la "$OUT/LauncherLayoutBackup-2.9.apk"
 "C:/Users/su/.workbuddy/binaries/python/envs/default/Scripts/python.exe" -c "
 import zipfile,hashlib
-p=r'$OUT/LauncherLayoutBackup-2.8.apk'
+p=r'$OUT/LauncherLayoutBackup-2.9.apk'
 z=zipfile.ZipFile(p)
 print('entries:', len(z.namelist()))
 print('dex:', [n for n in z.namelist() if n.endswith('.dex')])
 print('xposed:', [n for n in z.namelist() if 'xposed' in n])
 print('md5:', hashlib.md5(open(p,'rb').read()).hexdigest())
 "
-echo "APK=$OUT/LauncherLayoutBackup-2.8.apk"
+echo "APK=$OUT/LauncherLayoutBackup-2.9.apk"
 echo "DONE"

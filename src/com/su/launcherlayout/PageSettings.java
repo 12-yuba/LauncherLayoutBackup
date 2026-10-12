@@ -164,8 +164,13 @@ final class PageSettings extends Page {
         aboutIn.addView(UiKit.dividerRow(host));
         aboutIn.addView(UiKit.kvBlock(host, "作用域", "com.miui.home（系统桌面）"));
         aboutIn.addView(UiKit.dividerRow(host));
-        aboutIn.addView(UiKit.kvBlock(host, "权限",
-                "无 —— 本 App 只发广播，实际读写全部在桌面进程内完成，不需要 root"));
+        aboutIn.addView(UiKit.kvBlock(host, "运行前提",
+                "手机已 root（KernelSU / Magisk 等）+ 已安装 LSPosed\n"
+                        + "本模块是 LSPosed 模块，离开 root 无法使用"));
+        aboutIn.addView(UiKit.dividerRow(host));
+        aboutIn.addView(UiKit.kvBlock(host, "本 App 的权限",
+                "无 —— 不申请任何权限，也不需要被单独授予 root。\n"
+                        + "实际读写全部在「系统桌面」自己的进程里完成，用的是桌面的身份"));
         aboutIn.addView(UiKit.dividerRow(host));
         aboutIn.addView(UiKit.kvBlock(host, "备份内容",
                 "launcher*.db(+wal) + 一致性快照 + miui_widget/app_status/app_category_new.db\n"
