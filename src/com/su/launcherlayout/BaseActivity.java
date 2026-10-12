@@ -291,8 +291,7 @@ abstract class BaseActivity extends Activity {
         m.append("该备份网格：").append(backupGrid).append('\n');
         m.append("当前网格：").append(currentGrid).append('\n');
         if (!backupGrid.equals(currentGrid)) {
-            m.append("⚠️ 网格不一致，恢复后图标可能错位\n");
-            m.append("   建议先把桌面网格改成 ").append(backupGrid).append(" 再恢复\n");
+            m.append("⚠️ 网格不一致，图标可能错位。建议先改成 ").append(backupGrid).append("\n");
         }
         m.append("\n请选择要还原的文件：");
 
@@ -317,8 +316,7 @@ abstract class BaseActivity extends Activity {
                 .setMessage("来源：\n  " + prettyTime(dir) + "\n  └ " + file + "\n\n"
                         + "将覆盖当前桌面布局。\n\n"
                         + "· 备份网格 " + backupGrid + " / 当前网格 " + currentGrid + "\n"
-                        + "· 恢复前会自动把当前状态另存为一份回滚点\n"
-                        + "· 恢复后桌面进程会自动重启（画面闪一下）\n"
+                        + "· 恢复前会先自动备份当前状态，恢复后桌面会自动重启\n"
                         + (snap ? "· 使用一致性快照文件，数据自洽，最稳\n" : ""))
                 .setPositiveButton("恢复", new DialogInterface.OnClickListener() {
                     @Override
@@ -443,9 +441,7 @@ abstract class BaseActivity extends Activity {
         if (p == null) {
             new AlertDialog.Builder(this)
                     .setTitle("不支持的位置")
-                    .setMessage("只能选「手机内部存储」下的目录。\n\n你选的是：\n" + docId
-                            + "\n\nSD 卡 / U 盘 / OTG 不支持 —— 这些介质会被拔掉，"
-                            + "备份会在 App 里「消失」，反而更危险。")
+                    .setMessage("只能选手机内部存储。\n\n你选的是：\n" + docId)
                     .setPositiveButton("知道了", null)
                     .show();
             return;
@@ -482,9 +478,7 @@ abstract class BaseActivity extends Activity {
     protected void confirmRootRestart() {
         new AlertDialog.Builder(this)
                 .setTitle("广播没响应")
-                .setMessage("桌面进程里还没加载模块，广播方式重启无效。\n\n"
-                        + "是否改用 root 直接结束桌面进程？\n"
-                        + "（KernelSU 会弹出授权，允许后桌面会自动重启）")
+                .setMessage("模块还没注入，广播重启无效。改用 root 结束桌面进程？")
                 .setPositiveButton("用 root 重启", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {

@@ -62,7 +62,7 @@ final class PageHome extends Page {
         bar.addView(more);
         c.addView(bar);
 
-        TextView sub = UiKit.text(host, "只备份排版数据，不含 APK · 本 App 零权限",
+        TextView sub = UiKit.text(host, "只备份排版数据，不含 APK · 需已 root + LSPosed",
                 Theme.onSurfaceVariant, 12f);
         sub.setPadding(0, UiKit.dp(host, 4), 0, 0);
         c.addView(sub);
@@ -112,7 +112,7 @@ final class PageHome extends Page {
         // ---------- 主动作 ----------
         LinearLayout act = UiKit.card(host);
         act.addView(UiKit.itemRow(host, R.drawable.ic_box, "立即备份桌面布局",
-                "抓一份当前的图标排版，只有几百 KB",
+                "抓一份当前排版，几百 KB",
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -122,7 +122,7 @@ final class PageHome extends Page {
                 }));
         act.addView(UiKit.dividerRow(host));
         act.addView(UiKit.itemRow(host, R.drawable.ic_check, "一键恢复最近备份",
-                "不用挑文件，直接用最近一次备份覆盖",
+                "直接用最近一次备份覆盖",
                 new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -267,10 +267,7 @@ final class PageHome extends Page {
 
         mRootDialog = new AlertDialog.Builder(host)
                 .setTitle("先给备份选个位置")
-                .setMessage("备份不能默认丢在 Download 里 —— 清理下载文件时很容易连备份一起删掉，"
-                        + "到时候就真找不回来了。\n\n"
-                        + "请指定一个单独的目录（只能选手机内部存储）。\n"
-                        + "设好之后这里不会再打扰你。")
+                .setMessage("给备份指定一个单独的目录，不要放在 Download 里。\n只能选手机内部存储。")
                 .setView(box)
                 .setCancelable(false)
                 .create();
@@ -449,10 +446,7 @@ final class PageHome extends Page {
         boolean has = "1".equals(host.cfg.get("ghost"));
         mGhostCard.setVisibility(has ? View.VISIBLE : View.GONE);
         if (has) {
-            mGhostText.setText("已保留一份「删除前的安全备份」\n"
-                    + "它叫 " + BackupEngine.GHOST_DIR + "（名字前面带点，所以列表里看不到）。\n"
-                    + "点「找回」会去掉那个点，让它变成一份正常备份出现在「备份」页；"
-                    + "或者等下一次正式备份成功后自动清除。");
+            mGhostText.setText("已保留一份删除前的安全备份，可随时找回。");
         }
     }
 
@@ -461,13 +455,8 @@ final class PageHome extends Page {
     private void recoverGhost() {
         new AlertDialog.Builder(host)
                 .setTitle("找回删除前的备份？")
-                .setMessage("它现在叫 "
-                        + BackupEngine.GHOST_DIR + "，名字前面带个点，"
-                        + "所以文件管理器默认不显示、备份列表里也看不到。\n\n"
-                        + "点「找回」会把名字前面的点去掉，让它变成一份**正常的备份**，"
-                        + "出现在「备份」页里 —— 然后你自己决定要不要恢复。\n\n"
-                        + "· 不会直接动你的桌面\n"
-                        + "· 可以先去「备份」页点「打开」看看里面是什么")
+                .setMessage("把它变回一份正常备份，出现在「备份」页，之后你自己决定要不要恢复。\n"
+                        + "不会直接动你的桌面。")
                 .setPositiveButton("找回", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int w) {
@@ -482,7 +471,7 @@ final class PageHome extends Page {
     private void dropGhost() {
         new AlertDialog.Builder(host)
                 .setTitle("丢弃安全备份？")
-                .setMessage("删除后这份「删除前的安全备份」就真的没了。")
+                .setMessage("删除后无法恢复。")
                 .setPositiveButton("丢弃", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int w) {
@@ -504,8 +493,8 @@ final class PageHome extends Page {
                 .setTitle("恢复到最近备份？")
                 .setMessage("将用最近一次备份覆盖当前桌面布局：\n\n  " + UiKit.prettyTime(dir)
                         + "\n  网格 " + g + "（当前 " + host.currentGrid + "）\n\n"
-                        + "· 恢复前会自动把当前状态另存为一份回滚点\n"
-                        + "· 恢复后桌面进程会自动重启\n"
+                        + "· 恢复前会先自动备份当前状态\n"
+                        + "· 恢复后桌面会自动重启\n"
                         + (g.equals(host.currentGrid) ? "" : "⚠️ 网格不一致，图标可能错位\n"))
                 .setPositiveButton("恢复", new DialogInterface.OnClickListener() {
                     @Override
@@ -521,9 +510,8 @@ final class PageHome extends Page {
     private void confirmRestart() {
         new AlertDialog.Builder(host)
                 .setTitle("重启桌面进程？")
-                .setMessage("桌面进程会被结束并由系统自动重新拉起（屏幕闪一下，属正常）。\n\n"
-                        + "· 刚在 LSPosed 里启用模块 → 用它让注入生效\n"
-                        + "· 恢复布局后 → 用它让新数据库重新加载")
+                .setMessage("桌面会重启一次（屏幕闪一下，正常）。\n"
+                        + "刚启用模块、或刚恢复过布局，用它生效。")
                 .setPositiveButton("重启", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int w) {

@@ -26,7 +26,8 @@ import java.util.regex.Pattern;
 /**
  * 备份 / 恢复 引擎。运行在「小米桌面进程」内，因此：
  * <ul>
- *   <li>读写 /data/user_de/0/com.miui.home/ 下的私有库天然合法，不需要 root；</li>
+ *   <li>读写 /data/user_de/0/com.miui.home/ 下的私有库天然合法，不需要额外授权
+ *       （本模块的读写代码就跑在桌面进程内，用的是桌面自己的身份）；</li>
  *   <li>小米桌面持有 MANAGE_EXTERNAL_STORAGE，可直接写 /sdcard/Download。</li>
  * </ul>
  */

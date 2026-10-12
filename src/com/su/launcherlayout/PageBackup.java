@@ -116,8 +116,7 @@ final class PageBackup extends Page {
             LinearLayout card = UiKit.card(host);
             UiKit.pad(host, card, 18, 18, 18);
             card.addView(UiKit.rowTitle(host, "当前目录下没有备份"));
-            TextView t = UiKit.rowSummary(host, host.rootPath
-                    + "\n\n如果你刚改过备份路径，旧备份还在原来那个目录里，切回去就能看到。");
+            TextView t = UiKit.rowSummary(host, host.rootPath);
             t.setPadding(0, UiKit.dp(host, 6), 0, 0);
             card.addView(t);
             mEmpty.addView(card);
@@ -136,10 +135,8 @@ final class PageBackup extends Page {
         }
         new AlertDialog.Builder(host)
                 .setTitle("删除全部 " + mDirs.length + " 份备份？")
-                .setMessage("将删除：\n" + host.rootPath + "/LauncherLayoutBackup-*\n\n"
-                        + "✔ 删除前会自动留一份**隐藏的安全备份**，"
-                        + "之后你可以一键找回，或等下次正式备份成功后自动清除。\n\n"
-                        + "⚠️ 只删本程序生成的备份目录，其它文件一律不动。")
+                .setMessage("将删除 " + host.rootPath + " 下全部备份。\n"
+                        + "删除前会自动留一份安全备份，可随时找回。")
                 .setPositiveButton("删除", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int w) {

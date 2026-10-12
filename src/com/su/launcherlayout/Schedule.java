@@ -469,10 +469,7 @@ final class Schedule {
         final String norm = normalizeRoot(input);
         if (norm == null) {
             return new BackupEngine.Result(false,
-                    "只允许手机内部存储路径。\n"
-                            + "正确示例：/storage/emulated/0/Download\n"
-                            + "（SD 卡、U 盘 / OTG 一律不支持：这些介质会被拔掉，"
-                            + "备份会在 App 里「消失」，反而更危险）", null, null);
+                    "只允许手机内部存储路径，例如 /storage/emulated/0/Backup", null, null);
         }
         final File d = new File(norm);
         if (!d.isDirectory() && !d.mkdirs()) {

@@ -54,10 +54,7 @@ final class PageSettings extends Page {
         LinearLayout auto = UiKit.card(host);
         LinearLayout autoIn = UiKit.column(host);
         UiKit.pad(host, autoIn, 16, 14, 14);
-        autoIn.addView(UiKit.rowSummary(host,
-                "跑在桌面进程里 —— 本 App 不用常驻，也不吃电。\n"
-                        + "三档各自计时；同一时刻多档到期只备份一次。\n"
-                        + "开「仅变化时备份」后布局没变就跳过，不堆重复文件。"));
+        autoIn.addView(UiKit.rowSummary(host, "跑在桌面进程里，App 不用常驻。改动立刻生效。"));
         sw7 = addSwitch(autoIn, "每 7 天");
         sw30 = addSwitch(autoIn, "每 30 天");
         sw180 = addSwitch(autoIn, "每 180 天");
@@ -77,10 +74,7 @@ final class PageSettings extends Page {
         LinearLayout pathCard = UiKit.card(host);
         LinearLayout pathIn = UiKit.column(host);
         UiKit.pad(host, pathIn, 16, 14, 14);
-        pathIn.addView(UiKit.rowSummary(host,
-                "只允许手机内部存储。SD 卡 / U 盘 / OTG 不支持 ——\n"
-                        + "这些介质会被拔掉，备份会在 App 里「消失」，反而更危险。\n"
-                        + "改路径不会动老备份：旧目录里的还在那儿，切回去就能看到。"));
+        pathIn.addView(UiKit.rowSummary(host, "只允许手机内部存储，SD 卡 / U 盘不支持。改路径不动老备份。"));
         mRootNow = UiKit.mono(host, "当前：—", Theme.primary, 11f);
         pathIn.addView(mRootNow, UiKit.full(host, 8, 0));
         mPath = addEdit(pathIn, "路径", "/storage/emulated/0/Download", false);
@@ -109,11 +103,8 @@ final class PageSettings extends Page {
         LinearLayout keepCard = UiKit.card(host);
         LinearLayout keepIn = UiKit.column(host);
         UiKit.pad(host, keepIn, 16, 14, 14);
-        keepIn.addView(UiKit.rowSummary(host,
-                "自动备份最多保留几份，超出的**只删最早的自动备份**。\n"
-                        + "手动备份、找回的安全备份永不自动删除；\n"
-                        + "本版本之前生成的老备份没有触发标记，也不会被删。填 0 = 不限制。"));
-        mKeep = addEdit(keepIn, "最多保留份数（默认 5）", "5", true);
+        keepIn.addView(UiKit.rowSummary(host, "自动备份最多保留几份，只删最早的自动备份。手动备份不会删。0 = 不限制。"));
+        mKeep = addEdit(keepIn, "最多保留份数", "5", true);
         keepCard.addView(keepIn);
         c.addView(keepCard, UiKit.full(host, 8, 0));
 
@@ -122,9 +113,7 @@ final class PageSettings extends Page {
         LinearLayout logCard = UiKit.card(host);
         LinearLayout logIn = UiKit.column(host);
         UiKit.pad(host, logIn, 16, 14, 14);
-        logIn.addView(UiKit.rowSummary(host,
-                "关掉之后主页不再显示日志面板，页面跟其它页一样干净。\n"
-                        + "日志仍会继续记录，但只保留 360 天，超期自动清除。"));
+        logIn.addView(UiKit.rowSummary(host, "关掉后主页不显示日志面板。日志保留 360 天。"));
         swLog = addSwitch(logIn, "在主页显示操作日志");
         logCard.addView(logIn);
         c.addView(logCard, UiKit.full(host, 8, 0));
@@ -132,12 +121,6 @@ final class PageSettings extends Page {
         // ---------- 鸣谢 ----------
         c.addView(section("鸣谢"));
         LinearLayout credit = UiKit.card(host);
-        LinearLayout creditIn = UiKit.column(host);
-        UiKit.pad(host, creditIn, 16, 14, 6);
-        creditIn.addView(UiKit.rowSummary(host,
-                "这两个链接也会写进每个备份目录的 README.txt ——\n"
-                        + "备份文件脱离本 App 流传（发给朋友、传网盘）时，署名也还在。\n点一下直接打开主页。"));
-        credit.addView(creditIn);
         credit.addView(UiKit.itemRow(host, 0, creditName("l1n", "瞑望") + " · 思路提供",
                 creditUrl("l1u"), new View.OnClickListener() {
                     @Override
@@ -169,16 +152,14 @@ final class PageSettings extends Page {
                         + "本模块是 LSPosed 模块，离开 root 无法使用"));
         aboutIn.addView(UiKit.dividerRow(host));
         aboutIn.addView(UiKit.kvBlock(host, "本 App 的权限",
-                "无 —— 不申请任何权限，也不需要被单独授予 root。\n"
-                        + "实际读写全部在「系统桌面」自己的进程里完成，用的是桌面的身份"));
+                "不申请任何权限。备份与恢复由桌面进程以自身身份完成，不提权；\n"
+                        + "只有「用 root 重启桌面」这一个兜底按钮会请求一次 root 授权"));
         aboutIn.addView(UiKit.dividerRow(host));
         aboutIn.addView(UiKit.kvBlock(host, "备份内容",
-                "launcher*.db(+wal) + 一致性快照 + miui_widget/app_status/app_category_new.db\n"
-                        + "+ drawer/ + shared_prefs + CSV 导出 + MANIFEST.sha256"));
+                "launcher*.db(+wal) + 一致性快照 + 三个附属库 + drawer/ + prefs + CSV + MANIFEST"));
         aboutIn.addView(UiKit.dividerRow(host));
-        aboutIn.addView(UiKit.kvBlock(host, "安全备份（隐藏）",
-                "一键删除全部备份前会自动留一份 " + BackupEngine.GHOST_DIR
-                        + "（名字带点、默认隐藏），\n可随时找回，或等下次正式备份成功后自动清除"));
+        aboutIn.addView(UiKit.kvBlock(host, "安全备份",
+                "一键删除全部备份前会自动留一份，可随时找回"));
         about.addView(aboutIn);
         c.addView(about, UiKit.full(host, 8, 0));
 
