@@ -191,6 +191,27 @@ bash build.sh
 
 链路：`aapt2 compile → aapt2 link(+--java R.java) → javac → d8 → 组装 APK → jarsigner(v1)`
 
+`build.sh` 的依赖路径全部可用环境变量覆盖（`JDK_HOME` / `ANDROID_JAR` / `AAPT2_BIN` / `R8_JAR` /
+`LIBS_DIR` / `KEYSTORE_FILE` / `KEYSTORE_PASS` / `KEYSTORE_ALIAS`），
+`libxposed` 的 aar 若本地没有会自动从 Maven Central 下载 —— **所以从干净检出也能直接构建**。
+
+### 在 GitHub 上自动构建
+
+`.github/workflows/build.yml` 已经配好：推 `v*` tag 或手动触发 `workflow_dispatch`，
+就会在 GitHub 的机器上编译，并把 APK 自动附加到对应的 Release
+（附件名固定 `LauncherLayoutBackup.apk`，保证永久直链有效）。
+
+需要在仓库 **Settings → Secrets and variables → Actions** 里加三个 Secret：
+
+| Secret | 怎么生成 / 填什么 |
+|---|---|
+| `KEYSTORE_B64` | `base64 -w0 llb.jks`（Windows 用 `certutil -encode` 或 Git Bash 的 `base64`） |
+| `KEYSTORE_PASS` | 密钥库口令 |
+| `KEYSTORE_ALIAS` | 密钥别名（如 `llb`） |
+
+> 用别的密钥签出来的包**签名不一致，老用户无法覆盖安装**（只能卸载重装，而卸载会清掉
+> LSPosed 的启用状态与作用域）。所以工作流在缺少 `KEYSTORE_B64` 时**直接失败**，不降级成临时签名。
+
 > 本项目用 **v1 签名 + `targetSdkVersion=29`**：因为 Android 11+ 只对 `targetSdk >= 30` 强制 v2/v3，
 > 29 走 v1 可正常安装（已实测）。副作用是设置里可能显示"专为旧版 Android 打造"。
 
