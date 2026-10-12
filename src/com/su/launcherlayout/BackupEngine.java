@@ -63,6 +63,65 @@ final class BackupEngine {
     /** 数据库文件可能的后缀。 */
     private static final String[] DB_SUFFIX = {"", "-wal", "-shm", "-journal"};
 
+    /**
+     * 恢复时记录的「源文件 / 目标库」绝对路径。
+     *
+     * <p>为什么不直接在本进程里写库：本进程就是桌面进程，写完到被杀之间有窗口，
+     * MIUI 的 LauncherProvider 会把自己的内存状态回写覆盖掉刚写的内容
+     * （实测：文件 mtime 变了但内容没变）。所以真正的写库交给一个**独立 shell 进程**，
+     * 在桌面进程死掉之后再执行。
+     */
+    static volatile String sRestoreSrc;
+
+    /** 待恢复库的后缀与标记文件名。 */
+    static final String RESTORE_SUFFIX = ".pending";
+    static final String RESTORE_FLAG = ".llb_restore_pending";
+
+    /**
+     * 桌面进程【启动最早期】调用（hook 在 ActivityThread.handleBindApplication 的 proceed 之前）。
+     *
+     * <p>若上次恢复留下了待替换的库，就在这里就地换掉。
+     * 此刻 LauncherProvider 还没初始化、还没打开数据库，
+     * 不存在"进程把自己的内存状态回写覆盖"的窗口 —— 这是恢复能生效的关键。
+     */
+    static void applyPendingRestore() {
+        try {
+            final File dbDir = new File("/data/user_de/0/" + Const.TARGET_PKG + "/databases");
+            final File flag = new File(dbDir, RESTORE_FLAG);
+            if (!flag.isFile()) {
+                return;
+            }
+            String name = readText(flag).trim();
+            if (name.length() > 0 && !name.endsWith(".db")) {
+                name = name + ".db";
+            }
+            boolean done = false;
+            if (name.length() > 0) {
+                final File pending = new File(dbDir, name + RESTORE_SUFFIX);
+                if (pending.isFile()) {
+                    final File dst = new File(dbDir, name);
+                    if (pending.renameTo(dst)) {
+                        for (String suf : new String[]{"-wal", "-shm", "-journal"}) {
+                            File f = new File(dbDir, name + suf);
+                            if (f.exists()) {
+                                f.delete();
+                            }
+                        }
+                        done = true;
+                        Bridge.log(Log.WARN, Const.TAG, "启动时接管：已用待恢复库替换 " + name);
+                    }
+                }
+            }
+            if (!done) {
+                Bridge.log(Log.ERROR, Const.TAG, "启动时接管失败（待恢复库缺失或改名失败）");
+            }
+            flag.delete();
+        } catch (Throwable t) {
+            Bridge.log(Log.ERROR, Const.TAG, "启动时接管异常", t);
+        }
+    }
+    static volatile String sRestoreDst;
+
     private static volatile File sRestoreDbDir;
 
     // =====================================================================
@@ -528,6 +587,10 @@ final class BackupEngine {
             }
             if (chosen.endsWith(SNAPSHOT_SUFFIX)) {
                 dbName = chosen.substring(0, chosen.length() - SNAPSHOT_SUFFIX.length());
+                // SNAPSHOT_SUFFIX 是 ".db.snapshot"，去掉后会丢扩展名，必须补回来
+                if (!dbName.endsWith(".db")) {
+                    dbName = dbName + ".db";
+                }
                 fromSnapshot = true;
             } else {
                 dbName = chosen;
@@ -554,6 +617,9 @@ final class BackupEngine {
             if (snap != null) {
                 chosen = snap;
                 dbName = snap.substring(0, snap.length() - SNAPSHOT_SUFFIX.length());
+                if (!dbName.endsWith(".db")) {
+                    dbName = dbName + ".db";
+                }
                 fromSnapshot = true;
             } else {
                 dbName = raw;
@@ -622,8 +688,22 @@ final class BackupEngine {
             }
         }
 
+        sRestoreSrc = new File(srcDir, chosen).getAbsolutePath();
+        sRestoreDst = new File(dbDir, dbName).getAbsolutePath();
+
         sRestoreDbDir = dbDir;
         purgeRuntimeFiles();
+
+        // 关键：除了上面就地写库（可能被桌面回写覆盖），再另存一份 .pending 并留标记。
+        // 桌面进程下次启动的最早期会用它替换正式库 —— 那时还没人打开数据库，一定生效。
+        try {
+            File pending = new File(dbDir, dbName + RESTORE_SUFFIX);
+            copyOver(new File(srcDir, chosen), pending);
+            writeText(new File(dbDir, RESTORE_FLAG), dbName);
+            Bridge.log(Log.WARN, Const.TAG, "已备好待恢复库：" + dbName + RESTORE_SUFFIX);
+        } catch (Throwable t) {
+            Bridge.log(Log.ERROR, Const.TAG, "备待恢复库失败", t);
+        }
 
         final String gridWarn = gridBackup.equals(gridNow) ? ""
                 : "\n⚠️ 网格不一致：备份 " + gridBackup + " / 当前 " + gridNow
@@ -990,7 +1070,9 @@ final class BackupEngine {
      */
     /** 只有自动排程产生的备份才会被保留策略清理；其它（手动 / 安全备份）永不自动删。 */
     private static boolean isAutoTrigger(String t) {
-        return t != null && (t.startsWith("定时") || t.startsWith("关机前"));
+        // 「恢复前自动」产生的回滚点也算自动备份，纳入保留份数，否则每恢复一次就永久多一份
+        return t != null && (t.startsWith("定时") || t.startsWith("关机前")
+                || t.startsWith("恢复前自动"));
     }
 
     static int pruneAuto(int keep) {

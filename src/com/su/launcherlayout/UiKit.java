@@ -267,9 +267,9 @@ final class UiKit {
         return button(c, t, Theme.dark ? 0xFF2C332A : 0xFFE7ECE2, Theme.onSurface, 13f, l);
     }
 
-    /** 危险操作。 */
+    /** 危险操作（实心：浅红底 + 深红字，别用透明底，否则看着像没渲染出来）。 */
     static Button danger(Context c, String t, View.OnClickListener l) {
-        return button(c, t, 0x00FFFFFF, Theme.error, 14f, l);
+        return button(c, t, Theme.dark ? 0xFF8C1D18 : 0xFFFFDAD6, Theme.error, 14f, l);
     }
 
     static Button mini(Context c, String t, View.OnClickListener l) {

@@ -182,17 +182,14 @@ public final class LauncherReceiver extends BroadcastReceiver {
 
                     if (Const.OP_RESTORE.equals(op)) {
                         BackupEngine.Result r = BackupEngine.restore(app, dir, dbFile);
-                        Bridge.reply(op, token, r.ok, r.message, null, r.dir);
-                        if (r.ok) {
-                            // 数据库已被替换，必须让桌面进程重启才能重新加载。
-                            new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Bridge.log(Log.WARN, Const.TAG, "重启桌面进程以加载新布局");
-                                    android.os.Process.killProcess(android.os.Process.myPid());
-                                }
-                            }, 1200L);
-                        }
+                        // 把「源文件 | 目标库 | 桌面 uid」打包回传给模块 App，
+                        // 由 App 用 root 从进程外执行：先杀桌面 -> 覆盖库 -> 修属主/上下文 -> 拉起。
+                        // 桌面自己做不到（platform_app 域不能 exec；进程内写库会被回写覆盖）。
+                        String pack = r.ok
+                                ? (BackupEngine.sRestoreSrc + "|" + BackupEngine.sRestoreDst
+                                   + "|" + android.os.Process.myUid())
+                                : null;
+                        Bridge.reply(op, token, r.ok, r.message, null, pack);
                     }
                 } catch (Throwable t) {
                     Bridge.log(Log.ERROR, Const.TAG, op + " 异常", t);

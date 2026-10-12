@@ -152,8 +152,9 @@ final class PageSettings extends Page {
                         + "本模块是 LSPosed 模块，离开 root 无法使用"));
         aboutIn.addView(UiKit.dividerRow(host));
         aboutIn.addView(UiKit.kvBlock(host, "本 App 的权限",
-                "不申请任何权限。备份与恢复由桌面进程以自身身份完成，不提权；\n"
-                        + "只有「用 root 重启桌面」这一个兜底按钮会请求一次 root 授权"));
+                "不申请任何权限。\n"
+                        + "备份由桌面进程以自身身份完成，不提权；\n"
+                        + "恢复需要一次 root 授权（要在桌面进程之外替换它的数据库文件）"));
         aboutIn.addView(UiKit.dividerRow(host));
         aboutIn.addView(UiKit.kvBlock(host, "备份内容",
                 "launcher*.db(+wal) + 一致性快照 + 三个附属库 + drawer/ + prefs + CSV + MANIFEST"));

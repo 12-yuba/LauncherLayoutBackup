@@ -413,18 +413,12 @@ final class PageHome extends Page {
             s.setPadding(0, UiKit.dp(host, 3), 0, 0);
             col.addView(s);
             LinearLayout br = UiKit.row(host);
-            br.addView(UiKit.mini(host, "打开", new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    host.openDir(name);
-                }
-            }));
             br.addView(UiKit.mini(host, "恢复", new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     host.startRestoreFlow(name);
                 }
-            }), UiKit.wrap(host, 8, 0));
+            }));
             col.addView(br, UiKit.full(host, 10, 0));
         }
         r.addView(col, UiKit.weight(host, 1f, 0, 0));

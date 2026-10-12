@@ -111,6 +111,19 @@ abstract class BaseActivity extends Activity {
                     lastBackupDir = items[0];
                 }
             }
+            // 恢复：桌面进程只负责备料，真正的换库由 App 用 root 从进程外完成
+            if (Const.OP_RESTORE.equals(op) && ok && dir != null && dir.indexOf('|') > 0) {
+                String[] parts = dir.split("\\|");
+                if (parts.length == 3) {
+                    try {
+                        doRootRestore(parts[0], parts[1], Integer.parseInt(parts[2]));
+                    } catch (Throwable t) {
+                        UiLog.log("❌ 解析恢复参数失败: " + t);
+                    }
+                }
+            } else if (Const.OP_RESTORE.equals(op) && !ok) {
+                UiLog.log("❌ 恢复准备失败：" + msg);
+            }
             onResult(op, ok, msg, dir, items, gridArr);
             UiLog.save(BaseActivity.this);
         }
@@ -267,6 +280,109 @@ abstract class BaseActivity extends Activity {
         dispatch(i, Const.ACTION_RECOVER_GHOST, true);
     }
 
+    /**
+     * 用 root 从【进程外】完成恢复 —— 顺序照旧版 restore.sh 验证过的做法：
+     * 1) am force-stop com.miui.home   先杀桌面（释放连接与内存缓存）
+     * 2) cp 备份库 -> databases/        再覆盖文件
+     * 3) rm -f 同名 -wal/-shm/-journal
+     * 4) chown uid:uid + chmod 660 + restorecon   修属主与 SELinux 上下文
+     * 5) am start MAIN/HOME             最后拉起来
+     */
+    protected void doRootRestore(final String src, final String dst, final int uid) {
+        UiLog.log("▶ root 恢复 → " + dst.substring(dst.lastIndexOf('/') + 1));
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String script =
+                        "am force-stop com.miui.home; " +
+                        "sleep 1; " +
+                        "cp -f '" + src + "' '" + dst + "'; " +
+                        "rm -f '" + dst + "-wal' '" + dst + "-shm' '" + dst + "-journal'; " +
+                        "chown " + uid + ":" + uid + " '" + dst + "'; " +
+                        "chmod 660 '" + dst + "'; " +
+                        "restorecon '" + dst + "'; " +
+                        // 清掉备料残留，否则桌面下次启动会再接管一次、把用户新改的布局回滚掉
+                        "rm -f '" + dst + ".pending' '" + dst + ".pending' "
+                                + "'$(dirname '" + dst + "')/.llb_restore_pending'; " +
+                        "echo SRC_MD5=$(md5sum '" + src + "' | cut -d' ' -f1); " +
+                        "echo DST_MD5=$(md5sum '" + dst + "' | cut -d' ' -f1); " +
+                        "am start -a android.intent.action.MAIN -c android.intent.category.HOME";
+                String out = "";
+                int code = -1;
+                StringBuilder report = new StringBuilder();
+                // 逐个尝试，并把【每个候选的真实报错】都记下来 —— 只报最后一个会掩盖真相。
+                String[] cands = {
+                        "su",
+                        "/system/bin/su",
+                        "/system/xbin/su",
+                        "/sbin/su",
+                        "/debug_ramdisk/su",
+                        "/data/adb/ksu/bin/su",
+                        "/data/adb/magisk/su",
+                };
+                for (String su : cands) {
+                    try {
+                        java.lang.Process p = Runtime.getRuntime()
+                                .exec(new String[]{su, "-c", script});
+                        StringBuilder sb = new StringBuilder();
+                        java.io.BufferedReader br = new java.io.BufferedReader(
+                                new java.io.InputStreamReader(p.getInputStream()));
+                        String l;
+                        while ((l = br.readLine()) != null) {
+                            sb.append(l).append('\n');
+                        }
+                        br.close();
+                        int rc = p.waitFor();
+                        report.append(su).append(" exit=").append(rc)
+                              .append(' ').append(sb.toString().trim()).append(" | ");
+                        if (rc == 0) {
+                            code = rc;
+                            out = sb.toString();
+                            break;
+                        }
+                    } catch (Throwable t) {
+                        report.append(su).append(" <- ").append(t.getMessage()).append(" | ");
+                    }
+                }
+                if (out.isEmpty()) {
+                    out = report.toString();
+                }
+                final int c = code;
+                final String o = out;
+                H.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        String smd5 = pick(o, "SRC_MD5=");
+                        String dmd5 = pick(o, "DST_MD5=");
+                        final boolean same = smd5 != null && smd5.equals(dmd5);
+                        UiLog.log("root 恢复: exit=" + c
+                                + " | 源=" + smd5 + " 目标=" + dmd5
+                                + (same ? " ✅ 一致" : " ❌ 不一致"));
+                        if (!same) {
+                            UiLog.log("   完整输出: " + o.replace('\n', ' '));
+                        }
+                        toast(same ? "恢复完成，桌面正在重新加载"
+                                : "恢复失败：写入内容与备份不符，看操作日志");
+                    }
+                });
+            }
+        }, "llb-root-restore").start();
+    }
+
+    /** 从脚本输出里抓 key=value。 */
+    private static String pick(String s, String key) {
+        if (s == null) {
+            return null;
+        }
+        int i = s.indexOf(key);
+        if (i < 0) {
+            return null;
+        }
+        int j = s.indexOf('\n', i);
+        String v = (j < 0) ? s.substring(i + key.length()) : s.substring(i + key.length(), j);
+        return v.trim();
+    }
+
     protected String[] lastDirs() {
         return lastDirs;
     }
@@ -277,10 +393,10 @@ abstract class BaseActivity extends Activity {
 
     // ================================================================== 恢复流程（共用）
 
+    /** 点「恢复」直接进入确认；后端会自动优先用最稳的一致性快照，不再让用户选文件。 */
     protected void startRestoreFlow(String dir) {
         pendingRestoreDir = dir;
-        UiLog.log("▶ 选择要恢复的文件: " + shortName(dir));
-        request(Const.ACTION_FILES, dir);
+        confirmRestore(dir, null, grids.containsKey(dir) ? grids.get(dir) : "?");
     }
 
     /** 第一步：从备份目录里列出所有可恢复文件，让用户自由挑一个。 */
@@ -310,19 +426,18 @@ abstract class BaseActivity extends Activity {
 
     /** 第二步：确认并执行。 */
     protected void confirmRestore(final String dir, final String file, String backupGrid) {
-        final boolean snap = file.endsWith(".db.snapshot");
         new AlertDialog.Builder(this)
                 .setTitle("确认恢复？")
-                .setMessage("来源：\n  " + prettyTime(dir) + "\n  └ " + file + "\n\n"
+                .setMessage("来源：" + prettyTime(dir) + "\n\n"
                         + "将覆盖当前桌面布局。\n\n"
                         + "· 备份网格 " + backupGrid + " / 当前网格 " + currentGrid + "\n"
                         + "· 恢复前会先自动备份当前状态，恢复后桌面会自动重启\n"
-                        + (snap ? "· 使用一致性快照文件，数据自洽，最稳\n" : ""))
+                        + "· 恢复需要 root（首次会弹一次 KernelSU 授权）")
                 .setPositiveButton("恢复", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        UiLog.log("▶ 恢复 " + shortName(dir) + " / " + file);
-                        request(Const.ACTION_RESTORE, dir, file);
+                        UiLog.log("▶ 恢复 " + shortName(dir));
+                        request(Const.ACTION_RESTORE, dir);
                     }
                 })
                 .setNegativeButton("取消", null)

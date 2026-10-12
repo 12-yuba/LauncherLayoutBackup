@@ -190,8 +190,7 @@ final class PageBackup extends Page {
                 col.addView(t2);
                 row.addView(col, UiKit.weight(host, 1f, 0, 8));
 
-                row.addView(UiKit.mini(host, "打开", null));
-                row.addView(UiKit.mini(host, "恢复", null), UiKit.wrap(host, 8, 0));
+                row.addView(UiKit.mini(host, "恢复", null));
             }
 
             final String name = mDirs[position];
@@ -203,14 +202,8 @@ final class PageBackup extends Page {
             t2.setText("网格 " + g + (same ? "  ✓ 与当前一致" : "  ⚠️ 与当前不一致"));
             t2.setTextColor(same ? Theme.onSurfaceVariant : Theme.error);
 
-            // ListView 复用，监听器每次重设
+            // ListView 复用，监听器每次重设（只剩一个按钮：恢复）
             row.getChildAt(1).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    host.openDir(name);
-                }
-            });
-            row.getChildAt(2).setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     host.startRestoreFlow(name);

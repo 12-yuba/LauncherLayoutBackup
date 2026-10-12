@@ -146,20 +146,20 @@ if [ ! -f "$KS" ]; then
 fi
 "$JDK/bin/jarsigner" -keystore "$KS" -storepass "$KEYSTORE_PASS" -keypass "$KEYSTORE_PASS" \
   -sigalg SHA256withRSA -digestalg SHA-256 \
-  -signedjar "$OUT/LauncherLayoutBackup-1.0.apk" "$OUT/apk/unsigned.apk" "$KEYSTORE_ALIAS" > "$OUT/sign.log" 2>&1 \
+  -signedjar "$OUT/LauncherLayoutBackup-1.1.apk" "$OUT/apk/unsigned.apk" "$KEYSTORE_ALIAS" > "$OUT/sign.log" 2>&1 \
   || { echo "!! jarsigner 失败"; head -20 "$OUT/sign.log"; exit 1; }
 
 echo
 echo "=== 7) 产物 ==="
-ls -la "$OUT/LauncherLayoutBackup-1.0.apk"
+ls -la "$OUT/LauncherLayoutBackup-1.1.apk"
 "C:/Users/su/.workbuddy/binaries/python/envs/default/Scripts/python.exe" -c "
 import zipfile,hashlib
-p=r'$OUT/LauncherLayoutBackup-1.0.apk'
+p=r'$OUT/LauncherLayoutBackup-1.1.apk'
 z=zipfile.ZipFile(p)
 print('entries:', len(z.namelist()))
 print('dex:', [n for n in z.namelist() if n.endswith('.dex')])
 print('xposed:', [n for n in z.namelist() if 'xposed' in n])
 print('md5:', hashlib.md5(open(p,'rb').read()).hexdigest())
 "
-echo "APK=$OUT/LauncherLayoutBackup-1.0.apk"
+echo "APK=$OUT/LauncherLayoutBackup-1.1.apk"
 echo "DONE"

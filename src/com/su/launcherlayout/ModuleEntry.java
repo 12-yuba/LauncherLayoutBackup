@@ -53,10 +53,55 @@ public final class ModuleEntry extends XposedModule {
             return;
         }
         try {
+            installEarlyHook();
+        } catch (Throwable t) {
+            log(Log.ERROR, Const.TAG, "installEarlyHook 失败", t);
+        }
+        try {
             installHook();
         } catch (Throwable t) {
             log(Log.ERROR, Const.TAG, "installHook 失败", t);
         }
+    }
+
+    /**
+     * hook {@code ActivityThread#handleBindApplication}，在它 proceed() **之前**
+     * 应用"待恢复的桌面数据库"。
+     *
+     * <p>必须选这个点，因为 Android 的启动顺序是：
+     * <pre>
+     * handleBindApplication
+     *   ├─ installContentProviders()   ← LauncherProvider 在这里初始化、可能已打开数据库
+     *   └─ Application.onCreate()      ← 太晚了
+     * </pre>
+     * 只有在 Provider 之前换库，才能保证恢复不被运行中的桌面覆盖。
+     */
+    private void installEarlyHook() throws Exception {
+        final Class<?> at = Class.forName("android.app.ActivityThread");
+        Method target = null;
+        for (Method m : at.getDeclaredMethods()) {
+            if ("handleBindApplication".equals(m.getName())) {
+                target = m;
+                break;
+            }
+        }
+        if (target == null) {
+            log(Log.ERROR, Const.TAG, "没找到 ActivityThread.handleBindApplication");
+            return;
+        }
+        hook(target)
+                .setId("llb-handlebind")
+                .setPriority(PRIORITY_DEFAULT)
+                .setExceptionMode(ExceptionMode.PROTECTIVE)
+                .intercept(chain -> {
+                    try {
+                        BackupEngine.applyPendingRestore();
+                    } catch (Throwable t) {
+                        log(Log.ERROR, Const.TAG, "applyPendingRestore 失败", t);
+                    }
+                    return chain.proceed();
+                });
+        log(Log.INFO, Const.TAG, "已 hook handleBindApplication（启动时接管已就绪）");
     }
 
     /**
