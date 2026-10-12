@@ -1,0 +1,13 @@
+# 构建产物
+_out/
+_build/
+
+# 签名密钥库：绝不入库（入库等于别人能冒充你的包名签名）
+llb.jks
+*.jks
+*.keystore
+
+# 临时/日志
+*.log
+*.apk
+*.idsig

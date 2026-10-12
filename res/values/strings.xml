@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">桌面布局备份</string>
+    <string name="app_desc">一键备份 / 恢复小米桌面(HyperOS)的图标布局数据库，只存排版数据不备份 APK，体积仅几百 KB。</string>
+</resources>

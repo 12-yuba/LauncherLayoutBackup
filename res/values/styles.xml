@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Miuix 风格没有 ActionBar；状态栏/窗口底色跟页面一致，避免白闪和异色条 -->
+    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+        <item name="android:windowBackground">#F3F7EE</item>
+        <item name="android:statusBarColor">#F3F7EE</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorAccent">#146C2E</item>
+    </style>
+</resources>
