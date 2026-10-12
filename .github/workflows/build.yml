@@ -1,0 +1,81 @@
+name: build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 安装 platform 与 build-tools
+        run: sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+
+      - name: 解析工具路径
+        run: |
+          echo "JDK_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_JAR=$ANDROID_SDK_ROOT/platforms/android-35/android.jar" >> "$GITHUB_ENV"
+          A2=$(find "$ANDROID_SDK_ROOT/build-tools/35.0.0" -maxdepth 1 -name 'aapt2*' | head -1)
+          echo "AAPT2_BIN=$A2" >> "$GITHUB_ENV"
+          curl -sSL -o "$RUNNER_TEMP/r8.jar" \
+            https://maven.google.com/com/android/tools/r8/8.3.37/r8-8.3.37.jar
+          echo "R8_JAR=$RUNNER_TEMP/r8.jar" >> "$GITHUB_ENV"
+
+      # 必须用官方密钥库签名：换个签名用户就没法覆盖安装，
+      # 只能卸载重装，而卸载会清掉 LSPosed 的启用状态与作用域。
+      - name: 还原签名密钥库
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error title=缺少签名密钥::仓库 Secret KEYSTORE_B64 未配置。"
+            echo "::error::用别的密钥签出来的包签名不一致，老用户无法覆盖安装，所以这里直接失败而不是降级。"
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_B64" | base64 -d > llb.jks
+          ls -l llb.jks
+
+      - name: 构建
+        env:
+          LIBS_DIR: ${{ runner.temp }}/libs
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+        run: bash build.sh
+
+      - name: 取出 APK（统一改名，保证永久直链有效）
+        id: apk
+        run: |
+          SRC=$(find _out -name 'LauncherLayoutBackup-*.apk' | head -1)
+          if [ -z "$SRC" ]; then echo "::error::没找到构建产物"; exit 1; fi
+          cp "$SRC" LauncherLayoutBackup.apk
+          echo "size=$(stat -c%s LauncherLayoutBackup.apk)" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum LauncherLayoutBackup.apk | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: LauncherLayoutBackup-apk
+          path: LauncherLayoutBackup.apk
+
+      # 附件名固定为 LauncherLayoutBackup.apk 不带版本号，
+      # 这样 releases/latest/download/LauncherLayoutBackup.apk 才是永久有效的直链。
+      - name: 附加到 Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: LauncherLayoutBackup.apk
