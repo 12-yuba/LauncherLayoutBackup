@@ -12,6 +12,17 @@ the module app itself** — zero permissions requested.
 - 模块入口：`io.github.libxposed.api.XposedModule` · **libxposed API 102**
 - 语言：Java（无 androidx 依赖，UI 全部代码构建）
 
+### ⬇ 下载
+
+**永久直链（永远是最新版，收藏这个就行）**
+
+```
+https://github.com/12-yuba/LauncherLayoutBackup/releases/latest/download/LauncherLayoutBackup.apk
+```
+
+- 历史版本 / 更新日志：<https://github.com/12-yuba/LauncherLayoutBackup/releases>
+- 该直链依赖于「每个 release 都上传一个名为 `LauncherLayoutBackup.apk` 的附件」这一约定，请勿改动附件名。
+
 ---
 
 ## 1. 它解决什么问题
