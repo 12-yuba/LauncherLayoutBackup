@@ -5,16 +5,18 @@
 > ⚠️ **前提：手机已取得 root（KernelSU / Magisk 等）并且安装了 LSPosed。**
 > 本项目是 LSPosed 模块，**离开 root 无法使用**。
 >
-> 需要澄清的是：**模块 App 自己申请零权限，也不需要被授予 root**。
-> 因为真正读写的代码跑在「系统桌面」自己的进程里，用的是桌面自己的身份；
-> 所以不必像一般脚本方案那样，额外给某个 App 开 root 权限、再让它去 `cp` 文件。
+> 需要澄清的是：**模块 App 自己申请零权限，日常备份也不需要给它授权 root**。
+> 因为备份真正读写的代码跑在「系统桌面」自己的进程里，用的是桌面自己的身份。
+> 唯一例外是**恢复**：为了在桌面进程之外安全替换数据库文件，
+> 首次恢复会请求一次 root 授权（KernelSU / Magisk 弹窗，可记住），详见 §8。
 
 **English**: An LSPosed module that backs up / restores the MIUI & HyperOS launcher layout
 (icon positions, folders, pages) as a tiny snapshot (a few hundred KB, **no APKs included**).
 
 **Requires root (KernelSU / Magisk) + LSPosed** — it is an LSPosed module and cannot work without them.
-What it does *not* need: any permission for the module app itself, and no root grant for the app —
-the actual file I/O runs inside the system launcher process, under the launcher's own identity.
+What it does *not* need: any permission for the module app itself; **backups** require no root grant
+for the app either — the actual file I/O runs inside the system launcher process, under the launcher's
+own identity. **Restoring** asks for a one-time root grant (see §8).
 
 - 作用域：`com.miui.home`（系统桌面）
 - 模块入口：`io.github.libxposed.api.XposedModule` · **libxposed API 102**
@@ -75,7 +77,7 @@ https://github.com/12-yuba/LauncherLayoutBackup/releases/latest/download/Launche
 
 ## 3. 工作原理
 
-### 3.1 为什么不用给模块 App 授权 root
+### 3.1 为什么备份不用给模块 App 授权 root
 
 模块通过 LSPosed 注入到**系统桌面自己的进程**里（这一步需要 root + LSPosed）。于是：
 
@@ -84,7 +86,8 @@ https://github.com/12-yuba/LauncherLayoutBackup/releases/latest/download/Launche
   所以它能把备份**直接写到共享存储**
 
 所以模块 App 本身**不申请任何权限**，只是个遥控器；
-你也不需要像用 root 脚本那样，给某个 App 单独开 root 授权。
+日常备份你也不需要像用 root 脚本那样，给某个 App 单独开 root 授权。
+（恢复是另一条路，需要一次 root 授权，见 §8。）
 
 ### 3.2 数据流
 
